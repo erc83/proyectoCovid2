@@ -203,3 +203,4 @@ const covid19 = (function(){
   return { init, state }  
 })();
 covid19.init()
+// terminado con validacion token
