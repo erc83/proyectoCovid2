@@ -1,82 +1,136 @@
-const Countries = (async () => {
-  const urlApi = "http://localhost:3000/api/total";
-  const retorno = await getData(urlApi)
-  const paises = await retorno.filter(pais => pais.active >= 10000)
-  fillPaisTable(await paises);   //ejecutando funcion fillPaisTable
-  drawGraphic(paises); //ejecuta function drawGraphic
-​
-  return { paises: await paises }      // esta return logra que la funcion sea expuesta
-})()
-​
-async function getData(url) {
-  try {
-    const resp = await fetch(url).then(resp => resp.json())
-    //console.log(resp.data)
-    return resp.data;
-  } catch (error) {
-    console.log(error)
+const covid19 = (function(){
+  const state = {} 
+  const URL = {
+    base: 'http://localhost:3000/api',
+    login: 'http://localhost:3000/api/login',
+    total: 'http://localhost:3000/api/total',
+    country: function(_country){
+      return `${this.base}/countries/${_country}`
+     }
   }
-}
-function fillPaisTable(paises) {
-  let tableContent = ''
-  paises.forEach((pais, i) => {
-    tableContent += `<tr>
-   <td>${pais.location}</td>
-   <td>${pais.confirmed}</td>
-   <td>${pais.recovered}</td>
-   <td>${pais.deaths}</td>
-   <td>${pais.active}</td>
-   <td>
-      <button data-id="${i}" data-country="${pais.location}" class="modelo">Ver detalles</button>
-    </td>
-   </tr>`
-  })
-  let data = document.querySelector("#paises tbody")
-  //console.log(tableContent)
-  data.innerHTML = data.innerHTML + tableContent
-}
-​
-function modalHtmlDetail(pais) { // grafico
-  const ctx = document.querySelector('#chartContainer').getContext('2d');
-  const dataPaises = [pais.confirmed, pais.recovered, pais.deaths, pais.active]
-  const paisesName = ['confirmados', 'recuperados', 'muertos', 'activos' ];
-  //console.log(dataPaises)
-  const config = {
-      type: 'bar',
-      data: {
-          labels: paisesName,
-          datasets:  [{
-            data: dataPaises,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.2)',
-              'rgba(54, 162, 235, 0.2)',
-              'rgba(255, 206, 86, 0.2)',
-              'rgba(75, 192, 192, 0.2)'
-          ],
-        }]
-      },
-      options: { scales: { yAxes: [{ ticks: { beginAtZero: true } }] } }
+  const loginForm = document.getElementById('login-form')
+  const table = document.querySelector('table#total')
+  table.addEventListener('click',showModalListener)
+  loginForm.addEventListener('submit',submitListener)
+  function showModalListener(e){
+    e.preventDefault()
+    const countryTarget = e.target.dataset.country 
+    if(countryTarget){
+      const dataCountry = state.total.find(country => country.location === countryTarget)
+      showModal(dataCountry)
+    }
   }
-  new Chart(ctx, config);
-}
-document.addEventListener('click', async function (e) {
-  if (e.target.classList.contains('modelo')) {
-    const country = e.target.dataset.country
-    const selectedCountry = await Countries.then(info => info.paises.filter(pais => pais.location === country))
-    modalHtmlDetail(selectedCountry[0])
-    const modalTile = document.querySelector('.modal-title')
-    modalTile.innerText = selectedCountry[0].location
+  
+  function showModal(country){
+    const modalTitle = document.querySelector('.modal-title')
+    modalTitle.innerText = country.location
+    fillChart(country, 'modalChart')
     $('.modal').modal('show')
   }
-})
-/*
-//para ocultar
-function toggleFormTable() {
-  $('form').toggle()
-  $("#paises").toggle()
-}
-*/
-function drawGraphic(paises){
+  function fillChart(data, canvas){
+    const ctx = document.getElementById(canvas).getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Confirmados', 'Fallecidos', 'Recuperados', 'Activos'],
+        datasets: [{
+            label: '# of Votes',
+            data: [data.confirmed, data.deaths, data.recovered, data.active],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true
+                }
+            }]
+        }
+    }
+});
+  }
+  async function login(){
+    const email = document.getElementById('email').value
+    const password = document.getElementById('password').value
+    try {
+      const result = await fetch(URL.login,{
+        method: 'POST',
+        body: JSON.stringify( { email: email, password: password } )
+    })
+    const { token } = await result.json()
+    saveToken(token)
+    } catch (error) {
+     return error
+    }
+  }
+  function saveToken(token){
+    localStorage.setItem('jwt-token',token)
+    state.token = token
+  }
+  async function getTotal(){
+    try {
+      const result = await fetch(URL.total,{
+        headers: {
+        Authorization: `Bearer ${state.token}`
+      }
+    }).then(result => result.json())
+      return result.data
+    } catch (error) {
+      return error
+    }
+  }
+ async function init(){
+    const jwt = localStorage.getItem('jwt-token')
+    if(jwt){
+      //Ocultar el form y mostrar la table
+      state.total = await getTotal()
+      hideForm()
+      showTable()
+      drawGraphic(state.total)
+    }  
+    console.log(state);
+  }
+  function hideForm(){
+    document.getElementById('login-form').style.display = 'none'
+  }
+  function showTable(){
+    fillTable()
+    document.getElementById('total').style.display = 'block'
+  }
+  function fillTable(){
+    const info = state.total.map(country => `<tr>
+      <td>${country.location}</td>
+      <td>${country.confirmed}</td>
+      <td>${country.deaths}</td>
+      <td>${country.recovered}</td>
+      <td>${country.active}</td>
+      <td>
+        <button data-country="${country.location}">Ver detalle</button>
+      <td>
+    </tr>`
+    ).join('')
+    const tableBody = document.querySelector('#total tbody')
+    tableBody.innerHTML = info
+  }
+  function submitListener(e){
+    e.preventDefault();
+    login()
+    init()
+  }
+  function drawGraphic(paises){
   const confirmados = []
   paises.map(pais => confirmados.push({label: pais.location, y: pais.confirmed}));
   const recuperados = []
@@ -92,7 +146,7 @@ function drawGraphic(paises){
           text: " Global Impact Graph Covid 19"
       },	
       axisY: {
-          title: "",
+          title: "Cantidad de Casos",
           titleFontColor: "#4F81BC",
           lineColor: "#4F81BC",
           labelFontColor: "#4F81BC",
@@ -134,10 +188,9 @@ function drawGraphic(paises){
           dataPoints: activos
       }]
   })
-  ;
   chart.render();
   
-  function toggleDataSeries(e) {
+    function toggleDataSeries(e) {
       if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
           e.dataSeries.visible = false;
       }
@@ -145,10 +198,8 @@ function drawGraphic(paises){
           e.dataSeries.visible = true;
       }
       chart.render();
-  }      
-} 
-
-
-//function drawGraphin(paises){
-  
-//}
+    }      
+  } 
+  return { init, state }  
+})();
+covid19.init()
