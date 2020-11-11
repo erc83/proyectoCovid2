@@ -147,7 +147,7 @@ function drawGraphic(paises){
       chart.render();
   }      
 } 
-}
+
 
 //function drawGraphin(paises){
   
