@@ -8,38 +8,72 @@
   <title>Covid19</title>
 </head>
 <body>
-  <div class="container">
-    <form id='login-form'>
-      <div class="form-group">
-        <label for="exampleInputEmail1">Email address</label>
-        <input type="email" class="form-control" id="email" aria-describedby="emailHelp">
-      </div>
-      <div class="form-group">
-        <label for="exampleInputPassword1">Password</label>
-        <input type="password" class="form-control" id="password">
-      </div>
-      <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
+  <!--nabvar-->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">Covid 19</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a id="active-home" class="nav-link" href="#">Home<span class="sr-only"></span></a>
+        </li>
+        <li class="nav-item">
+          <a id="active-chile" class="nav-link" href="#">Situacion Chile<span class="sr-only"></span></a>
+        </li>
+        <li class="nav-item">
+          <a id="log-out" class="nav-link" href="http://localhost:3000/covid19">cerrar sesion<span class="sr-only"></span></a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+​
+  <div class="login">
+    <div class="container">
+      <form id='login-form'>
+        <div class="form-group">
+          <label for="exampleInputEmail1">Email address</label>
+          <input type="email" class="form-control" id="email" aria-describedby="emailHelp">
+        </div>
+        <div class="form-group">
+          <label for="exampleInputPassword1">Password</label>
+          <input type="password" class="form-control" id="password">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+    </div>
   </div>
 ​
-  <div class="container">
-    <div id="chartContainerBody" style="height: 300px; width: 100%;"></div>
-  </div>
   
-  <div class="container">
-    <table id='total' style="display:none">
-      <thead>
-        <tr>
-          <th>País</th>
-          <th>Confirmados</th>
-          <th>Fallecidos</th>
-          <th>Recuperados</th>
-          <th>Activos</th>
-        </tr>
-        <tbody></tbody>
-      </thead>
-    </table>
+  <div class="chilean" style="display: none;">
+    <div class="container">
+      <div id="chartContainerEsp" style="height: 300px; width: 100%;"></div>
+    </div>
   </div>
+​
+  <div class="home" style="display: block;">
+    <div class="container">
+      <div id="chartContainerBody" style="height: 300px; width: 100%;"></div>
+    </div>
+    
+    <div class="container">
+      <table id='total' style="display:none">
+        <thead>
+          <tr>
+            <th>País</th>
+            <th>Confirmados</th>
+            <th>Fallecidos</th>
+            <th>Recuperados</th>
+            <th>Activos</th>
+          </tr>
+          <tbody></tbody>
+        </thead>
+      </table>
+    </div>
+  </div>
+​
   <div class="modal" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">

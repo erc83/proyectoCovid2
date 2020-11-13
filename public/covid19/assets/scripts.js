@@ -6,7 +6,12 @@ const covid19 = (function(){
     total: 'http://localhost:3000/api/total',
     country: function(_country){
       return `${this.base}/countries/${_country}`
-     }
+    }
+  }
+  const UrlChile = {
+    confirmed: 'http://localhost:3000/api/confirmed',
+    deaths: 'http://localhost:3000/api/deaths',
+    recovered: 'http://localhost:3000/api/recovered',
   }
   const loginForm = document.getElementById('login-form')
   const table = document.querySelector('table#total')
@@ -20,7 +25,6 @@ const covid19 = (function(){
       showModal(dataCountry)
     }
   }
-  
   function showModal(country){
     const modalTitle = document.querySelector('.modal-title')
     modalTitle.innerText = country.location
@@ -34,7 +38,7 @@ const covid19 = (function(){
       data: {
         labels: ['Confirmados', 'Fallecidos', 'Recuperados', 'Activos'],
         datasets: [{
-            label: '# of Votes',
+            label: 'Cantidad de Casos',
             data: [data.confirmed, data.deaths, data.recovered, data.active],
             backgroundColor: [
                 'rgba(255, 99, 132, 0.2)',
@@ -92,16 +96,32 @@ const covid19 = (function(){
       return error
     }
   }
+  async function getChile() {
+    const header = {
+      headers: {
+        Authorization: `Bearer ${state.token}`
+      }
+    }
+    try {
+      const {data: confirmed} = await fetch(UrlChile.confirmed, header).then(res => res.json())
+      const {data: deaths} = await fetch(UrlChile.deaths, header).then(res => res.json())
+      const {data: recovered} = await fetch(UrlChile.recovered, header).then(res => res.json())
+      return { confirmed,deaths,recovered, }
+    } catch (error) {
+      console.log(error)
+    }
+  }
  async function init(){
     const jwt = localStorage.getItem('jwt-token')
     if(jwt){
-      //Ocultar el form y mostrar la table
-      state.total = await getTotal()
-      hideForm()
-      showTable()
-      drawGraphic(state.total)
+      state.token = jwt;
+      state.total = await getTotal();
+      state.chile = await getChile()
+      hideForm();
+      showTable();
+      drawGraphic(filterCountries(10000));
+      changePoint();
     }  
-    console.log(state);
   }
   function hideForm(){
     document.getElementById('login-form').style.display = 'none'
@@ -125,25 +145,24 @@ const covid19 = (function(){
     const tableBody = document.querySelector('#total tbody')
     tableBody.innerHTML = info
   }
-  function submitListener(e){
+  async function submitListener(e){
     e.preventDefault();
-    login()
+    await login()
     init()
   }
+  function filterCountries(param){
+    return state.total.filter(country => country.active > param)
+  }
   function drawGraphic(paises){
-  const confirmados = []
-  paises.map(pais => confirmados.push({label: pais.location, y: pais.confirmed}));
-  const recuperados = []
-  paises.map(pais => recuperados.push({label: pais.location, y: pais.recovered}));
-  const muertos = []
-  paises.map(pais => muertos.push({label: pais.location, y: pais.deaths}));
-  const activos = []
-  paises.map(pais => activos.push({label: pais.location, y: pais.active}));
+  const confirmados = paises.map(pais => ({label: pais.location, y: pais.confirmed}));
+  const recuperados = paises.map(pais => ({label: pais.location, y: pais.recovered}));
+  const muertos = paises.map(pais => ({label: pais.location, y: pais.deaths}));
+  const activos = paises.map(pais => ({label: pais.location, y: pais.active}));
  
   const chart = new CanvasJS.Chart("chartContainerBody", {
       animationEnabled: true,
       title:{
-          text: " Global Impact Graph Covid 19"
+          text: " Global Covid 19"
       },	
       axisY: {
           title: "Cantidad de Casos",
@@ -200,7 +219,81 @@ const covid19 = (function(){
       chart.render();
     }      
   } 
+  function changePoint(){
+    $('#active-chile').click(async () => {
+      drawingChileanGraphic(state.chile);
+      $('.chilean').show()
+      $('.home').hide()
+    })
+    $('#active-home').click(() => {
+      $('.chilean').hide()
+      $('.home').show()
+    })
+    $('#log-out').click(() => {
+      localStorage.removeItem('jwt-token')
+      location.reload();
+      console.log('log out')
+    })
+  }
+  function drawingChileanGraphic(data){
+    const confirmados = data.confirmed.map(obj => ({x: new Date(obj.date), y: obj.total}))
+    const muertos = data.deaths.map(obj => ({x: new Date(obj.date), y: obj.total}))
+    const recuperados = data.recovered.map(obj => ({x: new Date(obj.date), y: obj.total}))
+    const chart = new CanvasJS.Chart("chartContainerEsp", {
+      animationEnabled: true,
+      title:{
+        text: "Covid 19 Chile"
+      },
+      axisX: {
+        valueFormatString: "DD MM,YY"
+      },
+      axisY: {
+        title: "",
+        suffix: ""
+      },
+      legend:{
+        cursor: "pointer",
+        fontSize: 16,
+        itemclick: toggleDataSeries
+      },
+      toolTip:{
+        shared: true
+      },
+      data: [{
+        name: "Casos Confirmados",
+        type: "spline",
+        yValueFormatString: "",
+        showInLegend: true,
+        dataPoints: confirmados
+      },
+      {
+        name: "Casos Muertos",
+        type: "spline",
+        yValueFormatString: "",
+        showInLegend: true,
+        dataPoints: muertos
+      },
+      {
+        name: "Casos Recuperados",
+        type: "spline",
+        yValueFormatString: "",
+        showInLegend: true,
+        dataPoints: recuperados
+      }]
+    });
+    chart.render();
+    
+    function toggleDataSeries(e){
+      if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+        e.dataSeries.visible = false;
+      }
+      else{
+        e.dataSeries.visible = true;
+      }
+      chart.render();
+    }
+    
+  }
   return { init, state }  
 })();
-covid19.init()
-// terminado con validacion token
+covid19.init();
